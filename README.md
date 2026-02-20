@@ -1,16 +1,123 @@
-# React + Vite
+# Ember Noir Portfolio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite portfolio site with a lightweight profile chat API.
 
-Currently, two official plugins are available:
+## Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Frontend: React 19 + Vite 7
+- API: Node-style serverless function (`api/chat.js`) for Vercel
+- Shared logic: Intent matching and response generation in `shared/profileBrain.mjs`
 
-## React Compiler
+## Project Structure
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```text
+.
+├── api/
+│   └── chat.js                  # Production serverless endpoint: /api/chat
+├── scripts/
+│   └── dev-api.mjs              # Local API server for development
+├── shared/
+│   └── profileBrain.mjs         # Intent rules + response text
+├── src/
+│   ├── App.jsx                  # Main app + chat UI and API calls
+│   ├── styles.css
+│   └── assets/
+├── public/
+└── vite.config.js
+```
 
-## Expanding the ESLint configuration
+## How the Chat API Works
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 1) Frontend request flow (`src/App.jsx`)
+
+- Chat input calls `addMessage(text)`.
+- App sends `POST /api/chat` with JSON body:
+
+```json
+{ "message": "What ML projects have you done?" }
+```
+
+- UI handles:
+  - `429` as rate limit message
+  - non-OK responses as temporary failure text
+  - successful response as assistant bubble
+
+### 2) API endpoint (`api/chat.js`)
+
+`api/chat.js` exports a default handler for Vercel:
+
+- Accepts `GET` and `POST`
+- Extracts IP from `x-forwarded-for` (fallback to socket address)
+- Applies in-memory rate limiting:
+  - window: 60 seconds
+  - max: 12 requests per IP
+- Reads JSON payload for `POST` (with 20KB body guard)
+- Resolves response via `answerProfileQuestion(...)`
+- Returns:
+
+```json
+{ "reply": "...", "intent": "projects" }
+```
+
+Status behavior:
+
+- `200`: valid response
+- `405`: method not allowed (only `GET, POST`)
+- `429`: rate limited
+
+### 3) Intent engine (`shared/profileBrain.mjs`)
+
+- Contains profile facts and links in `PROFILE`.
+- Defines rule-based intents in `INTENTS`:
+  - greeting
+  - nielsen
+  - education
+  - cpp_windows
+  - ml
+  - projects
+  - writing
+  - contact
+- Matches user text using keyword scoring.
+- Returns:
+  - best intent response
+  - fallback response if no strong keyword match
+  - empty-input prompt when message is blank
+
+## Local Development
+
+Install and run:
+
+```bash
+npm install
+npm run dev
+```
+
+`npm run dev` starts:
+
+- Vite frontend dev server
+- Local API server (`scripts/dev-api.mjs`) on `http://localhost:8787`
+
+## Build
+
+```bash
+npm run build
+npm run preview
+```
+
+## Deployed Behavior (Vercel)
+
+- Static frontend from Vite build output (`dist/`)
+- Serverless API from `api/chat.js` available at `/api/chat`
+
+## Website Images
+
+### About Section
+
+![Graduation photo](public/about-graduation.png)
+
+### Portfolio Assets
+
+![Kanban project thumbnail](src/assets/portfolio/kanban-thumb.svg)
+![Model prediction results](src/assets/portfolio/model_prediction_results.png)
+![Writing project thumbnail](src/assets/portfolio/writing-thumb.svg)
+
