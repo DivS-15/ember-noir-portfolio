@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b0a0a"/>
+      <stop offset="0.55" stop-color="#120c0a"/>
+      <stop offset="1" stop-color="#0b0a0a"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="25%" cy="18%" r="70%">
+      <stop offset="0" stop-color="#ff7a18" stop-opacity="0.45"/>
+      <stop offset="0.65" stop-color="#ff7a18" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#ff7a18" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#141012" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#0f0e0e" stop-opacity="0.98"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7a18"/>
+      <stop offset="1" stop-color="#ffab40"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#000000" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="tinyShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="10" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <rect width="1400" height="900" fill="url(#glow)"/>
+
+  <!-- Paper card -->
+  <g filter="url(#softShadow)">
+    <rect x="210" y="160" width="980" height="580" rx="36" fill="url(#paper)" stroke="#2a1e18" stroke-opacity="0.85"/>
+  </g>
+
+  <!-- Header -->
+  <g>
+    <rect x="250" y="210" width="200" height="16" rx="8" fill="url(#accent)" fill-opacity="0.9"/>
+    <rect x="250" y="244" width="620" height="12" rx="6" fill="#fff7f0" fill-opacity="0.22"/>
+  </g>
+
+  <!-- Text lines -->
+  <g>
+    <rect x="250" y="300" width="820" height="12" rx="6" fill="#fff7f0" fill-opacity="0.20"/>
+    <rect x="250" y="332" width="780" height="12" rx="6" fill="#fff7f0" fill-opacity="0.17"/>
+    <rect x="250" y="364" width="760" height="12" rx="6" fill="#fff7f0" fill-opacity="0.14"/>
+    <rect x="250" y="408" width="840" height="12" rx="6" fill="#fff7f0" fill-opacity="0.18"/>
+    <rect x="250" y="440" width="700" height="12" rx="6" fill="#fff7f0" fill-opacity="0.14"/>
+  </g>
+
+  <!-- Code block -->
+  <g filter="url(#tinyShadow)">
+    <rect x="250" y="492" width="900" height="190" rx="24" fill="#0b0a0a" fill-opacity="0.72" stroke="#241913" stroke-opacity="0.8"/>
+  </g>
+  <g>
+    <rect x="286" y="528" width="260" height="12" rx="6" fill="#4d8aff" fill-opacity="0.55"/>
+    <rect x="286" y="560" width="420" height="10" rx="5" fill="#fff7f0" fill-opacity="0.18"/>
+    <rect x="286" y="586" width="510" height="10" rx="5" fill="#fff7f0" fill-opacity="0.14"/>
+    <rect x="286" y="612" width="360" height="10" rx="5" fill="#fff7f0" fill-opacity="0.16"/>
+  </g>
+
+  <!-- Pen -->
+  <g filter="url(#tinyShadow)">
+    <path d="M1082 310 L1160 232 C1176 216 1202 216 1218 232 L1236 250 C1252 266 1252 292 1236 308 L1156 388 Z" fill="url(#accent)"/>
+    <path d="M1156 388 L1082 310 L1056 430 Z" fill="#ffab40" fill-opacity="0.9"/>
+    <path d="M1066 398 L1096 368" stroke="#0b0a0a" stroke-opacity="0.35" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <!-- Label -->
+  <text x="250" y="760" fill="#bda79a" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="18">
+    Writing · Tutorials · Engineering notes
+  </text>
+</svg>
