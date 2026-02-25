@@ -474,7 +474,7 @@ body {
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35); /* slightly reduced spread for the tight area */
 }
 
-/* LeetCode Stats */
+/* LeetCode Stats - Enhanced brightness and animations */
 .leetcode-container {
   display: flex;
   flex-direction: column;
