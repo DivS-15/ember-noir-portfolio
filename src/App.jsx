@@ -3,6 +3,44 @@ import co2PredictionThumb from "./assets/portfolio/model_prediction_results.png"
 import kanbanThumb from "./assets/portfolio/kanban-thumb.svg";
 import writingThumb from "./assets/portfolio/writing-thumb.svg";
 
+// Custom hook for animated counter
+function useCountUp(end, duration = 1000, shouldAnimate = false) {
+  const [count, setCount] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    if (!shouldAnimate || hasAnimated) {
+      setCount(end);
+      return;
+    }
+
+    setHasAnimated(true);
+    let startTime = null;
+    const startValue = 0;
+
+    const animate = (currentTime) => {
+      if (!startTime) startTime = currentTime;
+      const progress = Math.min((currentTime - startTime) / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const currentCount = Math.floor(startValue + (end - startValue) * easeOutQuart);
+      
+      setCount(currentCount);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setCount(end);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }, [end, duration, shouldAnimate, hasAnimated]);
+
+  return count;
+}
+
 const strengths = [
   "SDE @ Nielsen",
   "ML Engineering",
@@ -631,41 +669,29 @@ function LeetCodeStats() {
           </div>
         </div>
 
-        <div className="leetcode-card leetcode-difficulty">
-          <h3 className="leetcode-title">Easy</h3>
-          <div className="leetcode-stat">
-            <span className="leetcode-count">{stats.easySolved}</span>
-            <span className="leetcode-total">/ {stats.totalEasy}</span>
-          </div>
-          <div className="leetcode-bar">
-            <div className="leetcode-bar-fill easy" style={{ width: `${easyPercentage}%` }} />
-          </div>
-          <div className="leetcode-percentage">{easyPercentage}%</div>
-        </div>
+        <DifficultyCard
+          title="Easy"
+          solved={stats.easySolved}
+          total={stats.totalEasy}
+          percentage={easyPercentage}
+          difficulty="easy"
+        />
 
-        <div className="leetcode-card leetcode-difficulty">
-          <h3 className="leetcode-title">Medium</h3>
-          <div className="leetcode-stat">
-            <span className="leetcode-count">{stats.mediumSolved}</span>
-            <span className="leetcode-total">/ {stats.totalMedium}</span>
-          </div>
-          <div className="leetcode-bar">
-            <div className="leetcode-bar-fill medium" style={{ width: `${mediumPercentage}%` }} />
-          </div>
-          <div className="leetcode-percentage">{mediumPercentage}%</div>
-        </div>
+        <DifficultyCard
+          title="Medium"
+          solved={stats.mediumSolved}
+          total={stats.totalMedium}
+          percentage={mediumPercentage}
+          difficulty="medium"
+        />
 
-        <div className="leetcode-card leetcode-difficulty">
-          <h3 className="leetcode-title">Hard</h3>
-          <div className="leetcode-stat">
-            <span className="leetcode-count">{stats.hardSolved}</span>
-            <span className="leetcode-total">/ {stats.totalHard}</span>
-          </div>
-          <div className="leetcode-bar">
-            <div className="leetcode-bar-fill hard" style={{ width: `${hardPercentage}%` }} />
-          </div>
-          <div className="leetcode-percentage">{hardPercentage}%</div>
-        </div>
+        <DifficultyCard
+          title="Hard"
+          solved={stats.hardSolved}
+          total={stats.totalHard}
+          percentage={hardPercentage}
+          difficulty="hard"
+        />
       </div>
 
       <SubmissionHeatmap calendar={stats.submissionCalendar} />
@@ -685,7 +711,46 @@ function LeetCodeStats() {
   );
 }
 
+function DifficultyCard({ title, solved, total, percentage, difficulty }) {
+  const [isHovered, setIsHovered] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
+  const animatedCount = useCountUp(solved, 800, isHovered);
+  const animatedPercentage = useCountUp(parseFloat(percentage), 800, isHovered);
+
+  const handleMouseEnter = () => {
+    if (!hasAnimated) {
+      setIsHovered(true);
+      setHasAnimated(true);
+    }
+  };
+
+  return (
+    <div 
+      className="leetcode-card leetcode-difficulty"
+      onMouseEnter={handleMouseEnter}
+    >
+      <h3 className="leetcode-title">{title}</h3>
+      <div className="leetcode-stat">
+        <span className="leetcode-count">{animatedCount}</span>
+        <span className="leetcode-total">/ {total}</span>
+      </div>
+      <div className="leetcode-bar">
+        <div 
+          className={`leetcode-bar-fill ${difficulty}`} 
+          style={{ 
+            width: `${hasAnimated ? animatedPercentage : 0}%`,
+            transition: hasAnimated ? 'width 800ms cubic-bezier(0.25, 0.46, 0.45, 0.94)' : 'none'
+          }} 
+        />
+      </div>
+      <div className="leetcode-percentage">{percentage}%</div>
+    </div>
+  );
+}
+
 function ContestRatingGraph({ contestRanking, contestHistory }) {
+  const [hoveredContest, setHoveredContest] = useState(null);
+  
   if (!contestRanking || !contestHistory) return null;
 
   const history = [...contestHistory]
@@ -693,6 +758,9 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
     .sort((a, b) => a.contest.startTime - b.contest.startTime);
 
   if (history.length === 0) return null;
+
+  console.log('ContestRatingGraph: history length', history.length);
+  console.log('ContestRatingGraph: hoveredContest', hoveredContest);
 
   const ratings = history.map(c => c.rating);
   const minRating = Math.min(...ratings);
@@ -704,10 +772,17 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
   const chartMax = Math.ceil((maxRating + padding) / 100) * 100;
   const chartRange = chartMax - chartMin;
 
-  const points = history.map((contest, index) => {
+  const points = history.map((contestData, index) => {
     const x = (index / (history.length - 1)) * 100;
-    const y = 100 - ((contest.rating - chartMin) / chartRange) * 100;
-    return { x, y, rating: contest.rating, contest };
+    const y = 100 - ((contestData.rating - chartMin) / chartRange) * 100;
+    return { 
+      x, 
+      y, 
+      rating: contestData.rating,
+      ranking: contestData.ranking,
+      contest: contestData.contest,
+      index 
+    };
   });
 
   const pathData = points.map((p, i) => 
@@ -726,133 +801,149 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
 
   const badgeColor = getBadgeColor(contestRanking.badge?.name);
 
-  // Calculate bar chart data (contests per month for last 12 months)
-  const now = Date.now() / 1000;
-  const oneYearAgo = now - (365 * 24 * 60 * 60);
-  const recentContests = history.filter(c => c.contest.startTime >= oneYearAgo);
-  
-  const monthlyContests = {};
-  recentContests.forEach(contest => {
-    const date = new Date(contest.contest.startTime * 1000);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    monthlyContests[monthKey] = (monthlyContests[monthKey] || 0) + 1;
-  });
-
-  const months = [];
-  for (let i = 11; i >= 0; i--) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-    months.push({
-      key: monthKey,
-      count: monthlyContests[monthKey] || 0
-    });
-  }
-
-  const maxMonthlyCount = Math.max(...months.map(m => m.count), 1);
+  // Get rating trend (up/down arrow)
+  const ratingTrend = history.length >= 2 
+    ? history[history.length - 1].rating > history[history.length - 2].rating 
+      ? 'up' 
+      : 'down'
+    : 'neutral';
 
   return (
-    <div className="leetcode-card contest-card">
-      <div className="contest-layout">
-        <div className="contest-left">
-          <div className="contest-stats-row">
-            <div className="contest-stat-item">
-              <div className="stat-label">Contest Rating</div>
-              <div className="stat-value-large">{Math.round(contestRanking.rating)}</div>
+    <div className="leetcode-card contest-card-interactive">
+      <div className="contest-graph-header">
+        {hoveredContest && hoveredContest.contest && hoveredContest.ranking ? (
+          <>
+            <div className="contest-info-item">
+              <div className="info-label">Contest Rating</div>
+              <div className="info-value-large">
+                {Math.round(hoveredContest.rating)}
+                {history.length >= 2 && hoveredContest.index > 0 && (
+                  <span className={`trend-arrow ${
+                    hoveredContest.rating > history[hoveredContest.index - 1].rating ? 'up' : 'down'
+                  }`}>
+                    {hoveredContest.rating > history[hoveredContest.index - 1].rating ? '↗' : '↘'}
+                  </span>
+                )}
+              </div>
             </div>
             
-            <div className="contest-badge-inline" style={{ '--badge-color': badgeColor }}>
-              <div className="badge-icon-inline">
+            <div className="contest-info-item contest-details">
+              <div className="contest-date">
+                {new Date(hoveredContest.contest.startTime * 1000).toLocaleDateString('en-US', { 
+                  month: 'short', 
+                  day: 'numeric', 
+                  year: 'numeric' 
+                })}
+              </div>
+              <div className="contest-name">{hoveredContest.contest.title}</div>
+            </div>
+
+            <div className="contest-info-item">
+              <div className="info-label">Rank</div>
+              <div className="info-value-medium">{hoveredContest.ranking.toLocaleString()}</div>
+            </div>
+
+            <div className="contest-info-item">
+              <div className="info-label">Solved</div>
+              <div className="info-value-medium">-</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="contest-info-item">
+              <div className="info-label">Contest Rating</div>
+              <div className="info-value-large">{Math.round(contestRanking.rating)}</div>
+            </div>
+            
+            <div className="contest-badge-display" style={{ '--badge-color': badgeColor }}>
+              <div className="badge-icon-large">
                 <svg viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
                 </svg>
               </div>
-              <div className="badge-info-inline">
-                <div className="badge-label-inline">Level</div>
-                <div className="badge-name-inline">{contestRanking.badge?.name || 'Unranked'}</div>
+              <div className="badge-text">
+                <div className="badge-label-large">Level</div>
+                <div className="badge-name-large">{contestRanking.badge?.name || 'Unranked'}</div>
               </div>
             </div>
 
-            <div className="contest-stat-item">
-              <div className="stat-label">Global Ranking</div>
-              <div className="stat-value-medium">
+            <div className="contest-info-item">
+              <div className="info-label">Global Ranking</div>
+              <div className="info-value-medium">
                 {contestRanking.globalRanking.toLocaleString()}
-                <span className="stat-total">/{(contestRanking.globalRanking / (contestRanking.topPercentage / 100)).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+                <span className="ranking-total">/{(contestRanking.globalRanking / (contestRanking.topPercentage / 100)).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
               </div>
             </div>
 
-            <div className="contest-stat-item">
-              <div className="stat-label">Attended</div>
-              <div className="stat-value-medium">{contestRanking.attendedContestsCount}</div>
+            <div className="contest-info-item">
+              <div className="info-label">Attended</div>
+              <div className="info-value-medium">{contestRanking.attendedContestsCount}</div>
             </div>
+          </>
+        )}
+      </div>
 
-            <div className="contest-stat-item">
-              <div className="stat-label">Top</div>
-              <div className="stat-value-medium">{contestRanking.topPercentage}%</div>
-            </div>
-          </div>
-
-          <div className="contest-graph-container">
-            <svg className="contest-graph-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="ratingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="var(--orange)" stopOpacity="0.8" />
-                  <stop offset="100%" stopColor="var(--orange)" stopOpacity="1" />
-                </linearGradient>
-              </defs>
-              
-              <path
-                d={pathData}
-                fill="none"
-                stroke="url(#ratingGradient)"
-                strokeWidth="0.8"
-                vectorEffect="non-scaling-stroke"
+      <div className="contest-graph-interactive">
+        <svg 
+          className="contest-graph-svg" 
+          viewBox="0 0 100 100" 
+          preserveAspectRatio="none"
+          onMouseLeave={() => setHoveredContest(null)}
+        >
+          <defs>
+            <linearGradient id="ratingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="var(--orange)" stopOpacity="0.8" />
+              <stop offset="100%" stopColor="var(--orange)" stopOpacity="1" />
+            </linearGradient>
+          </defs>
+          
+          <path
+            d={pathData}
+            fill="none"
+            stroke="url(#ratingGradient)"
+            strokeWidth="0.8"
+            vectorEffect="non-scaling-stroke"
+          />
+          
+          {points.map((point, i) => (
+            <g key={i}>
+              <circle
+                cx={point.x}
+                cy={point.y}
+                r="1.5"
+                fill={hoveredContest?.index === i ? "white" : "var(--orange)"}
+                className="rating-point"
+                onMouseEnter={() => setHoveredContest(point)}
+                style={{ cursor: 'pointer' }}
               />
-              
-              {points.map((point, i) => (
-                <circle
-                  key={i}
-                  cx={point.x}
-                  cy={point.y}
-                  r="1.2"
-                  fill="var(--orange)"
-                  className="rating-point"
-                >
-                  <title>{`${point.contest.contest.title}: ${Math.round(point.rating)}`}</title>
-                </circle>
-              ))}
-            </svg>
-            
-            <div className="graph-year-labels">
-              <span>{new Date(history[0].contest.startTime * 1000).getFullYear()}</span>
-              <span>{new Date(history[history.length - 1].contest.startTime * 1000).getFullYear()}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="contest-right">
-          <div className="bar-chart">
-            {months.map((month, i) => {
-              const height = (month.count / maxMonthlyCount) * 100;
-              const isHighlighted = i === months.length - 1 && month.count > 0;
-              const date = new Date();
-              date.setMonth(date.getMonth() - (11 - i));
-              const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-              const percentage = maxMonthlyCount > 0 ? ((month.count / contestRanking.attendedContestsCount) * 100).toFixed(1) : 0;
-              
-              return (
-                <div key={month.key} className="bar-wrapper">
-                  <div 
-                    className={`bar ${isHighlighted ? 'bar-highlighted' : ''}`}
-                    style={{ height: `${height}%` }}
+              {hoveredContest?.index === i && (
+                <>
+                  <line
+                    x1={point.x}
+                    y1="0"
+                    x2={point.x}
+                    y2="100"
+                    stroke="var(--orange)"
+                    strokeWidth="0.3"
+                    strokeDasharray="2,2"
+                    vectorEffect="non-scaling-stroke"
                   />
-                  <div className="bar-tooltip">
-                    {monthName}: {month.count} contest{month.count !== 1 ? 's' : ''} ({percentage}%)
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  <circle
+                    cx={point.x}
+                    cy={point.y}
+                    r="2.5"
+                    fill="var(--orange)"
+                    opacity="0.3"
+                  />
+                </>
+              )}
+            </g>
+          ))}
+        </svg>
+        
+        <div className="graph-year-labels">
+          <span>{new Date(history[0].contest.startTime * 1000).getFullYear()}</span>
+          <span>{new Date(history[history.length - 1].contest.startTime * 1000).getFullYear()}</span>
         </div>
       </div>
     </div>
