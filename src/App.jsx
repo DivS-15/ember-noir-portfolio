@@ -173,6 +173,7 @@ export default function App() {
           <a className="menu-item is-active" href="#home">Home</a>
           <a className="menu-item" href="#about">About</a>
           <a className="menu-item" href="#skills">Skills</a>
+          <a className="menu-item" href="#leetcode">LeetCode</a>
           <a className="menu-item" href="#experience">Experience</a>
           <a className="menu-item" href="#portfolio">Portfolio</a>
           <a className="menu-item" href="#contact">Contact</a>
@@ -266,6 +267,14 @@ export default function App() {
               </article>
             ))}
           </div>
+        </section>
+
+        <section className="section" id="leetcode">
+          <div className="section-head">
+            <h2 className="section-title">LeetCode Stats</h2>
+            <p className="section-kicker">Problem solving journey</p>
+          </div>
+          <LeetCodeStats />
         </section>
 
         <section className="section" id="experience">
@@ -383,6 +392,7 @@ export default function App() {
             <a href="#home">Home</a>
             <a href="#about">About</a>
             <a href="#skills">Skills</a>
+            <a href="#leetcode">LeetCode</a>
             <a href="#experience">Experience</a>
             <a href="#portfolio">Portfolio</a>
             <a href="#contact">Contact</a>
@@ -505,6 +515,496 @@ function Chat() {
       </form>
     </>
   );
+}
+
+function LeetCodeStats() {
+  const [stats, setStats] = useState(null);
+  const [contestData, setContestData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    console.log('LeetCodeStats: Fetching data...');
+    
+    const fetchStats = fetch("https://leetcode-stats.tashif.codes/DivSar_15")
+      .then(res => res.json())
+      .catch(err => {
+        console.error('Stats API error:', err);
+        return null;
+      });
+
+    const fetchContest = fetch("/api/leetcode/contest")
+      .then(res => res.json())
+      .catch(err => {
+        console.error('Contest API error:', err);
+        return null;
+      });
+
+    Promise.all([fetchStats, fetchContest])
+      .then(([statsData, contestResponse]) => {
+        console.log('LeetCodeStats: Data received', statsData, contestResponse);
+        
+        if (statsData && statsData.status === "success") {
+          setStats(statsData);
+        } else {
+          setError('Failed to load stats');
+        }
+        
+        if (contestResponse && contestResponse.data) {
+          setContestData(contestResponse.data);
+        }
+        
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('LeetCodeStats: Fetch error', error);
+        setError(error.message);
+        setLoading(false);
+      });
+  }, []);
+
+  console.log('LeetCodeStats: Rendering, loading=', loading, 'stats=', stats, 'error=', error);
+
+  if (loading) {
+    return (
+      <div className="leetcode-container">
+        <div className="leetcode-card">Loading stats...</div>
+      </div>
+    );
+  }
+
+  if (!stats || stats.status !== "success") {
+    return (
+      <div className="leetcode-container">
+        <div className="leetcode-card">
+          <p>Unable to load LeetCode stats. {error && `Error: ${error}`}</p>
+          <p>Visit my profile at{" "}
+            <a href="https://leetcode.com/u/DivSar_15/" target="_blank" rel="noreferrer">
+              leetcode.com/u/DivSar_15
+            </a>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const solvedPercentage = ((stats.totalSolved / stats.totalQuestions) * 100).toFixed(1);
+  const easyPercentage = ((stats.easySolved / stats.totalEasy) * 100).toFixed(1);
+  const mediumPercentage = ((stats.mediumSolved / stats.totalMedium) * 100).toFixed(1);
+  const hardPercentage = ((stats.hardSolved / stats.totalHard) * 100).toFixed(1);
+
+  return (
+    <div className="leetcode-container">
+      {contestData?.userContestRanking && (
+        <ContestRatingGraph 
+          contestRanking={contestData.userContestRanking}
+          contestHistory={contestData.userContestRankingHistory}
+        />
+      )}
+      
+      <div className="leetcode-grid">
+        <div className="leetcode-card leetcode-overview">
+          <div className="leetcode-stat-main">
+            <div className="leetcode-number">{stats.totalSolved}</div>
+            <div className="leetcode-label">Problems Solved</div>
+          </div>
+          <div className="leetcode-progress-ring">
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="var(--color-border)" strokeWidth="8" />
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="var(--color-primary)"
+                strokeWidth="8"
+                strokeDasharray={`${solvedPercentage * 2.827} 282.7`}
+                strokeLinecap="round"
+                transform="rotate(-90 50 50)"
+              />
+            </svg>
+            <div className="leetcode-progress-text">{solvedPercentage}%</div>
+          </div>
+          <div className="leetcode-meta">
+            <div>Ranking: <strong>#{stats.ranking.toLocaleString()}</strong></div>
+            <div>Acceptance: <strong>{stats.acceptanceRate}%</strong></div>
+          </div>
+        </div>
+
+        <div className="leetcode-card leetcode-difficulty">
+          <h3 className="leetcode-title">Easy</h3>
+          <div className="leetcode-stat">
+            <span className="leetcode-count">{stats.easySolved}</span>
+            <span className="leetcode-total">/ {stats.totalEasy}</span>
+          </div>
+          <div className="leetcode-bar">
+            <div className="leetcode-bar-fill easy" style={{ width: `${easyPercentage}%` }} />
+          </div>
+          <div className="leetcode-percentage">{easyPercentage}%</div>
+        </div>
+
+        <div className="leetcode-card leetcode-difficulty">
+          <h3 className="leetcode-title">Medium</h3>
+          <div className="leetcode-stat">
+            <span className="leetcode-count">{stats.mediumSolved}</span>
+            <span className="leetcode-total">/ {stats.totalMedium}</span>
+          </div>
+          <div className="leetcode-bar">
+            <div className="leetcode-bar-fill medium" style={{ width: `${mediumPercentage}%` }} />
+          </div>
+          <div className="leetcode-percentage">{mediumPercentage}%</div>
+        </div>
+
+        <div className="leetcode-card leetcode-difficulty">
+          <h3 className="leetcode-title">Hard</h3>
+          <div className="leetcode-stat">
+            <span className="leetcode-count">{stats.hardSolved}</span>
+            <span className="leetcode-total">/ {stats.totalHard}</span>
+          </div>
+          <div className="leetcode-bar">
+            <div className="leetcode-bar-fill hard" style={{ width: `${hardPercentage}%` }} />
+          </div>
+          <div className="leetcode-percentage">{hardPercentage}%</div>
+        </div>
+      </div>
+
+      <SubmissionHeatmap calendar={stats.submissionCalendar} />
+
+      <div className="leetcode-card leetcode-link">
+        <p>View full profile and submission history</p>
+        <a
+          className="btn cta"
+          href="https://leetcode.com/u/DivSar_15/"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Visit LeetCode Profile
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function ContestRatingGraph({ contestRanking, contestHistory }) {
+  if (!contestRanking || !contestHistory) return null;
+
+  const history = [...contestHistory]
+    .filter(c => c.attended)
+    .sort((a, b) => a.contest.startTime - b.contest.startTime);
+
+  if (history.length === 0) return null;
+
+  const ratings = history.map(c => c.rating);
+  const minRating = Math.min(...ratings);
+  const maxRating = Math.max(...ratings);
+  const ratingRange = maxRating - minRating;
+  const padding = ratingRange * 0.1;
+
+  const chartMin = Math.floor((minRating - padding) / 100) * 100;
+  const chartMax = Math.ceil((maxRating + padding) / 100) * 100;
+  const chartRange = chartMax - chartMin;
+
+  const points = history.map((contest, index) => {
+    const x = (index / (history.length - 1)) * 100;
+    const y = 100 - ((contest.rating - chartMin) / chartRange) * 100;
+    return { x, y, rating: contest.rating, contest };
+  });
+
+  const pathData = points.map((p, i) => 
+    `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
+  ).join(' ');
+
+  const getBadgeColor = (badgeName) => {
+    const colors = {
+      'Knight': '#5bff89',
+      'Guardian': '#4d8aff',
+      'Master': '#ff6d1b',
+      'Legend': '#ff6565'
+    };
+    return colors[badgeName] || '#ffab40';
+  };
+
+  const badgeColor = getBadgeColor(contestRanking.badge?.name);
+
+  // Calculate bar chart data (contests per month for last 12 months)
+  const now = Date.now() / 1000;
+  const oneYearAgo = now - (365 * 24 * 60 * 60);
+  const recentContests = history.filter(c => c.contest.startTime >= oneYearAgo);
+  
+  const monthlyContests = {};
+  recentContests.forEach(contest => {
+    const date = new Date(contest.contest.startTime * 1000);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    monthlyContests[monthKey] = (monthlyContests[monthKey] || 0) + 1;
+  });
+
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const date = new Date();
+    date.setMonth(date.getMonth() - i);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    months.push({
+      key: monthKey,
+      count: monthlyContests[monthKey] || 0
+    });
+  }
+
+  const maxMonthlyCount = Math.max(...months.map(m => m.count), 1);
+
+  return (
+    <div className="leetcode-card contest-card">
+      <div className="contest-layout">
+        <div className="contest-left">
+          <div className="contest-stats-row">
+            <div className="contest-stat-item">
+              <div className="stat-label">Contest Rating</div>
+              <div className="stat-value-large">{Math.round(contestRanking.rating)}</div>
+            </div>
+            
+            <div className="contest-badge-inline" style={{ '--badge-color': badgeColor }}>
+              <div className="badge-icon-inline">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                </svg>
+              </div>
+              <div className="badge-info-inline">
+                <div className="badge-label-inline">Level</div>
+                <div className="badge-name-inline">{contestRanking.badge?.name || 'Unranked'}</div>
+              </div>
+            </div>
+
+            <div className="contest-stat-item">
+              <div className="stat-label">Global Ranking</div>
+              <div className="stat-value-medium">
+                {contestRanking.globalRanking.toLocaleString()}
+                <span className="stat-total">/{(contestRanking.globalRanking / (contestRanking.topPercentage / 100)).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+              </div>
+            </div>
+
+            <div className="contest-stat-item">
+              <div className="stat-label">Attended</div>
+              <div className="stat-value-medium">{contestRanking.attendedContestsCount}</div>
+            </div>
+
+            <div className="contest-stat-item">
+              <div className="stat-label">Top</div>
+              <div className="stat-value-medium">{contestRanking.topPercentage}%</div>
+            </div>
+          </div>
+
+          <div className="contest-graph-container">
+            <svg className="contest-graph-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="ratingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="var(--orange)" stopOpacity="0.8" />
+                  <stop offset="100%" stopColor="var(--orange)" stopOpacity="1" />
+                </linearGradient>
+              </defs>
+              
+              <path
+                d={pathData}
+                fill="none"
+                stroke="url(#ratingGradient)"
+                strokeWidth="0.8"
+                vectorEffect="non-scaling-stroke"
+              />
+              
+              {points.map((point, i) => (
+                <circle
+                  key={i}
+                  cx={point.x}
+                  cy={point.y}
+                  r="1.2"
+                  fill="var(--orange)"
+                  className="rating-point"
+                >
+                  <title>{`${point.contest.contest.title}: ${Math.round(point.rating)}`}</title>
+                </circle>
+              ))}
+            </svg>
+            
+            <div className="graph-year-labels">
+              <span>{new Date(history[0].contest.startTime * 1000).getFullYear()}</span>
+              <span>{new Date(history[history.length - 1].contest.startTime * 1000).getFullYear()}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="contest-right">
+          <div className="bar-chart">
+            {months.map((month, i) => {
+              const height = (month.count / maxMonthlyCount) * 100;
+              const isHighlighted = i === months.length - 1 && month.count > 0;
+              const date = new Date();
+              date.setMonth(date.getMonth() - (11 - i));
+              const monthName = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+              const percentage = maxMonthlyCount > 0 ? ((month.count / contestRanking.attendedContestsCount) * 100).toFixed(1) : 0;
+              
+              return (
+                <div key={month.key} className="bar-wrapper">
+                  <div 
+                    className={`bar ${isHighlighted ? 'bar-highlighted' : ''}`}
+                    style={{ height: `${height}%` }}
+                  />
+                  <div className="bar-tooltip">
+                    {monthName}: {month.count} contest{month.count !== 1 ? 's' : ''} ({percentage}%)
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SubmissionHeatmap({ calendar }) {
+  if (!calendar) return null;
+
+  try {
+    const now = Date.now();
+    const oneYear = 365 * 24 * 60 * 60 * 1000;
+    const startDate = now - oneYear;
+
+    const weeks = [];
+    const currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    
+    const dayOfWeek = currentDate.getDay();
+    if (dayOfWeek !== 0) {
+      currentDate.setDate(currentDate.getDate() - dayOfWeek);
+    }
+
+    const submissions = Object.entries(calendar).map(([timestamp, count]) => ({
+      date: parseInt(timestamp) * 1000,
+      count: count,
+    }));
+
+    const maxCount = Math.max(...submissions.map(s => s.count), 1);
+
+    let iterations = 0;
+    const maxIterations = 400;
+    
+    while (currentDate.getTime() <= now && iterations < maxIterations) {
+      const week = [];
+      for (let i = 0; i < 7; i++) {
+        const dateTimestamp = currentDate.getTime();
+        const dayData = submissions.find(s => {
+          const sDate = new Date(s.date);
+          sDate.setHours(0, 0, 0, 0);
+          return sDate.getTime() === dateTimestamp;
+        });
+        
+        week.push({
+          date: new Date(dateTimestamp),
+          count: dayData ? dayData.count : 0,
+        });
+        
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+      weeks.push(week);
+      iterations++;
+    }
+
+    const getIntensity = (count) => {
+      if (count === 0) return 0;
+      if (count <= maxCount * 0.25) return 1;
+      if (count <= maxCount * 0.5) return 2;
+      if (count <= maxCount * 0.75) return 3;
+      return 4;
+    };
+
+    const months = [];
+    let currentMonth = null;
+    weeks.forEach((week, weekIndex) => {
+      if (week[0]) {
+        const monthName = week[0].date.toLocaleDateString('en-US', { month: 'short' });
+        if (monthName !== currentMonth) {
+          months.push({ name: monthName, weekIndex });
+          currentMonth = monthName;
+        }
+      }
+    });
+
+    const totalSubmissions = submissions.reduce((sum, s) => sum + s.count, 0);
+    const activeDays = submissions.filter(s => s.count > 0).length;
+    
+    let maxStreak = 0;
+    let currentStreak = 0;
+    const sortedDates = [...submissions].sort((a, b) => a.date - b.date);
+    
+    for (let i = 0; i < sortedDates.length; i++) {
+      if (sortedDates[i].count > 0) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    }
+
+    return (
+      <div className="leetcode-card heatmap-card">
+        <div className="heatmap-header">
+          <h3 className="heatmap-title">
+            <strong>{totalSubmissions}</strong> submissions in the past year
+          </h3>
+          <div className="heatmap-stats">
+            <span>Total active days: <strong>{activeDays}</strong></span>
+            <span>Max streak: <strong>{maxStreak}</strong></span>
+          </div>
+        </div>
+        
+        <div className="heatmap-container">
+          <div className="heatmap-months">
+            {months.map((month, i) => (
+              <div
+                key={i}
+                className="heatmap-month"
+                style={{ gridColumn: month.weekIndex + 1 }}
+              >
+                {month.name}
+              </div>
+            ))}
+          </div>
+          
+          <div className="heatmap-grid">
+            {weeks.map((week, weekIndex) => (
+              <div key={weekIndex} className="heatmap-week">
+                {week.map((day, dayIndex) => (
+                  <div
+                    key={dayIndex}
+                    className={`heatmap-day intensity-${getIntensity(day.count)}`}
+                  >
+                    <div className="heatmap-day-tooltip">
+                      {day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}: {day.count} submission{day.count !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          
+          <div className="heatmap-legend">
+            <span>Less</span>
+            <div className="heatmap-day intensity-0" />
+            <div className="heatmap-day intensity-1" />
+            <div className="heatmap-day intensity-2" />
+            <div className="heatmap-day intensity-3" />
+            <div className="heatmap-day intensity-4" />
+            <span>More</span>
+          </div>
+        </div>
+      </div>
+    );
+  } catch (error) {
+    console.error('Heatmap error:', error);
+    return (
+      <div className="leetcode-card">
+        <p>Unable to render submission heatmap</p>
+      </div>
+    );
+  }
 }
 
 function Bubble({ role, text }) {

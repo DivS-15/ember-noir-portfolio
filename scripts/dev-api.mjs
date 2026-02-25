@@ -54,6 +54,39 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.url.startsWith("/api/leetcode/contest")) {
+    try {
+      const response = await fetch("https://leetcode.com/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: `{
+            userContestRanking(username: "DivSar_15") {
+              attendedContestsCount
+              rating
+              globalRanking
+              topPercentage
+              badge { name }
+            }
+            userContestRankingHistory(username: "DivSar_15") {
+              attended
+              rating
+              ranking
+              contest {
+                title
+                startTime
+              }
+            }
+          }`
+        })
+      });
+      const data = await response.json();
+      return json(res, 200, data);
+    } catch (error) {
+      return json(res, 500, { error: "leetcode_api_error" });
+    }
+  }
+
   if (!req.url.startsWith("/api/chat")) return json(res, 404, { error: "not_found" });
 
   const ip = getIp(req);
