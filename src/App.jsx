@@ -170,10 +170,27 @@ const socialLinks = ["LinkedIn", "GitHub", "Medium", "Twitter"];
 export default function App() {
   const [theme, setTheme] = useState("ember-noir");
   const [activeSection, setActiveSection] = useState("home");
+  const menuRef = useRef(null);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
+
+  // Update indicator position when active section changes
+  useEffect(() => {
+    if (!menuRef.current) return;
+    
+    const activeLink = menuRef.current.querySelector(`[data-section="${activeSection}"]`);
+    const indicator = menuRef.current.querySelector('.menu-indicator');
+    
+    if (activeLink && indicator) {
+      const menuRect = menuRef.current.getBoundingClientRect();
+      const linkRect = activeLink.getBoundingClientRect();
+      
+      indicator.style.width = `${linkRect.width}px`;
+      indicator.style.transform = `translateX(${linkRect.left - menuRect.left}px)`;
+    }
+  }, [activeSection]);
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll(".section, #home"));
@@ -214,14 +231,15 @@ export default function App() {
           <span className="brand-title">Divyansh Saraswat</span>
         </div>
 
-        <nav className="menu">
-          <a className={`menu-item ${activeSection === 'home' ? 'is-active' : ''}`} href="#home">Home</a>
-          <a className={`menu-item ${activeSection === 'about' ? 'is-active' : ''}`} href="#about">About</a>
-          <a className={`menu-item ${activeSection === 'skills' ? 'is-active' : ''}`} href="#skills">Skills</a>
-          <a className={`menu-item ${activeSection === 'leetcode' ? 'is-active' : ''}`} href="#leetcode">LeetCode</a>
-          <a className={`menu-item ${activeSection === 'experience' ? 'is-active' : ''}`} href="#experience">Experience</a>
-          <a className={`menu-item ${activeSection === 'portfolio' ? 'is-active' : ''}`} href="#portfolio">Portfolio</a>
-          <a className={`menu-item ${activeSection === 'contact' ? 'is-active' : ''}`} href="#contact">Contact</a>
+        <nav className="menu" ref={menuRef}>
+          <div className="menu-indicator"></div>
+          <a className={`menu-item ${activeSection === 'home' ? 'is-active' : ''}`} href="#home" data-section="home">Home</a>
+          <a className={`menu-item ${activeSection === 'about' ? 'is-active' : ''}`} href="#about" data-section="about">About</a>
+          <a className={`menu-item ${activeSection === 'skills' ? 'is-active' : ''}`} href="#skills" data-section="skills">Skills</a>
+          <a className={`menu-item ${activeSection === 'leetcode' ? 'is-active' : ''}`} href="#leetcode" data-section="leetcode">LeetCode</a>
+          <a className={`menu-item ${activeSection === 'experience' ? 'is-active' : ''}`} href="#experience" data-section="experience">Experience</a>
+          <a className={`menu-item ${activeSection === 'portfolio' ? 'is-active' : ''}`} href="#portfolio" data-section="portfolio">Portfolio</a>
+          <a className={`menu-item ${activeSection === 'contact' ? 'is-active' : ''}`} href="#contact" data-section="contact">Contact</a>
         </nav>
 
         <button
