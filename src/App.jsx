@@ -169,13 +169,14 @@ const socialLinks = ["LinkedIn", "GitHub", "Medium", "Twitter"];
 
 export default function App() {
   const [theme, setTheme] = useState("ember-noir");
+  const [activeSection, setActiveSection] = useState("home");
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
   }, [theme]);
 
   useEffect(() => {
-    const sections = Array.from(document.querySelectorAll(".section"));
+    const sections = Array.from(document.querySelectorAll(".section, #home"));
     if (!sections.length) return;
 
     const observer = new IntersectionObserver(
@@ -187,11 +188,17 @@ export default function App() {
           entry.intersectionRatio > max.intersectionRatio ? entry : max
         );
 
+        // Update active section state
+        const sectionId = mostVisible.target.id;
+        if (sectionId) {
+          setActiveSection(sectionId);
+        }
+
         sections.forEach((section) => {
           section.classList.toggle("is-active", section === mostVisible.target);
         });
       },
-      { threshold: [0.35, 0.6, 0.85], rootMargin: "-20% 0px -20% 0px" }
+      { threshold: [0.15, 0.35, 0.6, 0.85], rootMargin: "-10% 0px -10% 0px" }
     );
 
     sections.forEach((section) => observer.observe(section));
@@ -208,13 +215,13 @@ export default function App() {
         </div>
 
         <nav className="menu">
-          <a className="menu-item is-active" href="#home">Home</a>
-          <a className="menu-item" href="#about">About</a>
-          <a className="menu-item" href="#skills">Skills</a>
-          <a className="menu-item" href="#leetcode">LeetCode</a>
-          <a className="menu-item" href="#experience">Experience</a>
-          <a className="menu-item" href="#portfolio">Portfolio</a>
-          <a className="menu-item" href="#contact">Contact</a>
+          <a className={`menu-item ${activeSection === 'home' ? 'is-active' : ''}`} href="#home">Home</a>
+          <a className={`menu-item ${activeSection === 'about' ? 'is-active' : ''}`} href="#about">About</a>
+          <a className={`menu-item ${activeSection === 'skills' ? 'is-active' : ''}`} href="#skills">Skills</a>
+          <a className={`menu-item ${activeSection === 'leetcode' ? 'is-active' : ''}`} href="#leetcode">LeetCode</a>
+          <a className={`menu-item ${activeSection === 'experience' ? 'is-active' : ''}`} href="#experience">Experience</a>
+          <a className={`menu-item ${activeSection === 'portfolio' ? 'is-active' : ''}`} href="#portfolio">Portfolio</a>
+          <a className={`menu-item ${activeSection === 'contact' ? 'is-active' : ''}`} href="#contact">Contact</a>
         </nav>
 
         <button
@@ -751,18 +758,48 @@ function DifficultyCard({ title, solved, total, percentage, difficulty }) {
 function ContestRatingGraph({ contestRanking, contestHistory }) {
   const [hoveredContest, setHoveredContest] = useState(null);
   
-  if (!contestRanking || !contestHistory) return null;
+  // Early validation - prevent crashes from missing data
+  if (!contestRanking || !contestHistory) {
+    console.warn('ContestRatingGraph: Missing required data');
+    return null;
+  }
 
-  const history = [...contestHistory]
-    .filter(c => c.attended)
+  // Validate and filter contest history
+  const history = contestHistory
+    .filter(c => {
+      // Ensure all required fields exist
+      return (
+        c &&
+        c.attended === true &&
+        typeof c.rating === 'number' &&
+        !isNaN(c.rating) &&
+        c.rating > 0 &&
+        typeof c.ranking === 'number' &&
+        c.contest &&
+        typeof c.contest.startTime === 'number' &&
+        typeof c.contest.title === 'string'
+      );
+    })
     .sort((a, b) => a.contest.startTime - b.contest.startTime);
 
-  if (history.length === 0) return null;
+  if (history.length === 0) {
+    console.warn('ContestRatingGraph: No valid contest data');
+    return null;
+  }
 
-  console.log('ContestRatingGraph: history length', history.length);
-  console.log('ContestRatingGraph: hoveredContest', hoveredContest);
+  console.log('ContestRatingGraph: Loaded', history.length, 'contests');
 
-  const ratings = history.map(c => c.rating);
+  // Performance optimization: limit to most recent 100 contests if dataset is huge
+  const MAX_CONTESTS = 100;
+  const displayHistory = history.length > MAX_CONTESTS 
+    ? history.slice(-MAX_CONTESTS) 
+    : history;
+
+  if (history.length > MAX_CONTESTS) {
+    console.log(`ContestRatingGraph: Showing most recent ${MAX_CONTESTS} of ${history.length} contests`);
+  }
+
+  const ratings = displayHistory.map(c => c.rating);
   const minRating = Math.min(...ratings);
   const maxRating = Math.max(...ratings);
   const ratingRange = maxRating - minRating;
@@ -772,9 +809,18 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
   const chartMax = Math.ceil((maxRating + padding) / 100) * 100;
   const chartRange = chartMax - chartMin;
 
-  const points = history.map((contestData, index) => {
-    const x = (index / (history.length - 1)) * 100;
+  // Prevent division by zero
+  if (chartRange === 0) {
+    console.warn('ContestRatingGraph: Invalid chart range');
+    return null;
+  }
+
+  const points = displayHistory.map((contestData, index) => {
+    const x = displayHistory.length === 1 
+      ? 50 // Center single point
+      : (index / (displayHistory.length - 1)) * 100;
     const y = 100 - ((contestData.rating - chartMin) / chartRange) * 100;
+    
     return { 
       x, 
       y, 
@@ -801,6 +847,39 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
 
   const badgeColor = getBadgeColor(contestRanking.badge?.name);
 
+  // Safe hover handler with bounds checking
+  const handlePointHover = (point) => {
+    if (!point || typeof point.index !== 'number') {
+      console.warn('ContestRatingGraph: Invalid point data');
+      return;
+    }
+    setHoveredContest(point);
+  };
+
+  // Safe trend calculation with bounds checking
+  const getTrendArrow = (hoveredContest) => {
+    if (!hoveredContest || hoveredContest.index <= 0 || displayHistory.length < 2) {
+      return null;
+    }
+
+    const prevIndex = hoveredContest.index - 1;
+    if (prevIndex < 0 || prevIndex >= displayHistory.length) {
+      return null;
+    }
+
+    const prevRating = displayHistory[prevIndex]?.rating;
+    if (typeof prevRating !== 'number') {
+      return null;
+    }
+
+    const isUp = hoveredContest.rating > prevRating;
+    return (
+      <span className={`trend-arrow ${isUp ? 'up' : 'down'}`}>
+        {isUp ? '↗' : '↘'}
+      </span>
+    );
+  };
+
   // Get rating trend (up/down arrow)
   const ratingTrend = history.length >= 2 
     ? history[history.length - 1].rating > history[history.length - 2].rating 
@@ -817,13 +896,7 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
               <div className="info-label">Contest Rating</div>
               <div className="info-value-large">
                 {Math.round(hoveredContest.rating)}
-                {history.length >= 2 && hoveredContest.index > 0 && (
-                  <span className={`trend-arrow ${
-                    hoveredContest.rating > history[hoveredContest.index - 1].rating ? 'up' : 'down'
-                  }`}>
-                    {hoveredContest.rating > history[hoveredContest.index - 1].rating ? '↗' : '↘'}
-                  </span>
-                )}
+                {getTrendArrow(hoveredContest)}
               </div>
             </div>
             
@@ -871,7 +944,9 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
               <div className="info-label">Global Ranking</div>
               <div className="info-value-medium">
                 {contestRanking.globalRanking.toLocaleString()}
-                <span className="ranking-total">/{(contestRanking.globalRanking / (contestRanking.topPercentage / 100)).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}</span>
+                <span className="ranking-total">
+                  /{Math.round(contestRanking.globalRanking / (contestRanking.topPercentage / 100)).toLocaleString()}
+                </span>
               </div>
             </div>
 
@@ -913,7 +988,7 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
                 r="1.5"
                 fill={hoveredContest?.index === i ? "white" : "var(--orange)"}
                 className="rating-point"
-                onMouseEnter={() => setHoveredContest(point)}
+                onMouseEnter={() => handlePointHover(point)}
                 style={{ cursor: 'pointer' }}
               />
               {hoveredContest?.index === i && (
@@ -942,8 +1017,8 @@ function ContestRatingGraph({ contestRanking, contestHistory }) {
         </svg>
         
         <div className="graph-year-labels">
-          <span>{new Date(history[0].contest.startTime * 1000).getFullYear()}</span>
-          <span>{new Date(history[history.length - 1].contest.startTime * 1000).getFullYear()}</span>
+          <span>{new Date(displayHistory[0].contest.startTime * 1000).getFullYear()}</span>
+          <span>{new Date(displayHistory[displayHistory.length - 1].contest.startTime * 1000).getFullYear()}</span>
         </div>
       </div>
     </div>

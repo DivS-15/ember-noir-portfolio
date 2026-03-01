@@ -197,7 +197,7 @@ body {
   border: none;
   cursor: pointer; 
   text-decoration: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   font-weight: 500;
   position: relative;
 }
@@ -209,7 +209,8 @@ body {
   border-radius: 10px;
   background: var(--glass-bg);
   opacity: 0;
-  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: scale(0.9);
 }
 
 .menu-item:hover {
@@ -218,6 +219,7 @@ body {
 
 .menu-item:hover::before {
   opacity: 1;
+  transform: scale(1);
 }
 
 .menu-item.is-active {
@@ -228,6 +230,7 @@ body {
 .menu-item.is-active::before {
   background: var(--accent-bg-rgba);
   opacity: 1;
+  transform: scale(1);
   box-shadow: inset 0 0 0 1px rgba(255, 122, 24, 0.2);
 }
 
