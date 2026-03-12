@@ -438,7 +438,7 @@ export default function App() {
 
             <div className="contact-card contact-side">
               <h3 className="contact-title">Prefer email?</h3>
-              <p className="contact-email">divyansh.saraswat@example.com</p>
+              <p className="contact-email">saraswatdivyans@gmail.com</p>
               <p className="muted">Profiles</p>
               <div className="tag-row">
                 {socialLinks.map((item) => (
