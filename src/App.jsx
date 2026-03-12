@@ -205,17 +205,18 @@ export default function App() {
           entry.intersectionRatio > max.intersectionRatio ? entry : max
         );
 
-        // Update active section state
-        const sectionId = mostVisible.target.id;
-        if (sectionId) {
-          setActiveSection(sectionId);
+        // Only update if the section is significantly visible (at least 30% in view)
+        if (mostVisible.intersectionRatio >= 0.3) {
+          const sectionId = mostVisible.target.id;
+          if (sectionId) {
+            setActiveSection(sectionId);
+          }
         }
-
-        sections.forEach((section) => {
-          section.classList.toggle("is-active", section === mostVisible.target);
-        });
       },
-      { threshold: [0.15, 0.35, 0.6, 0.85], rootMargin: "-10% 0px -10% 0px" }
+      { 
+        threshold: [0.3, 0.5, 0.7], 
+        rootMargin: "-20% 0px -20% 0px" 
+      }
     );
 
     sections.forEach((section) => observer.observe(section));
